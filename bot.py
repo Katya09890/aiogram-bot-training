@@ -1,33 +1,36 @@
+import os
+import ssl
 import asyncio
-import logging
-from aiogram import Bot, Dispatcher
+import aiohttp
+from aiogram import Bot, Dispatcher, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-
-# Импортируем наши модули
+from aiogram.client.session.aiohttp import AiohttpSession
 from config import TOKEN
-from handlers import basic
-from keyboards import main_menu
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
+# ОТКЛЮЧАЕМ ПРОВЕРКУ SSL
+os.environ['PYTHONHTTPSVERIFY'] = '0'
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
-# Создаем бота и диспетчер
+session = AiohttpSession(connector=aiohttp.TCPConnector(ssl=ssl_context))
+
 bot = Bot(
     token=TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    session=session
 )
+
 dp = Dispatcher()
 
-# Подключаем роутер с обработчиками
-dp.include_router(basic.router)
+@dp.message()
+async def echo(message: types.Message):
+    await message.answer("Бот работает!")
 
 async def main():
     print("🤖 Бот запущен!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("👋 Бот остановлен")
+    asyncio.run(main())
